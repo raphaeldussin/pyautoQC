@@ -1,4 +1,5 @@
 import xarray as xr
+import numpy as np
 
 
 def compare_dict(mydict, dict_ref):
@@ -23,4 +24,21 @@ def compare_dataset_dims(myds, ds_ref):
     ''' check consistency of dimensions '''
     if myds.dims != ds_ref.dims:
         raise ValueError("Dimensions are inconsistent between datasets")
+    return None
+
+
+def compare_dataset_coords(myds, ds_ref):
+    ''' check consistency of coords '''
+    listcoords_ref = list(myds.coords)
+    listcoords_cur = list(ds_ref.coords)
+    # test number of coordinates
+    if listcoords_ref != listcoords_cur:
+        raise ValueError("Coordinates list are inconsistent")
+    # remove time, in any
+    if 'time' in listcoords_cur:
+        listcoords_cur.remove('time')
+    # test the values of each coordinate
+    for coord in listcoords_cur:
+        if not np.array_equal(myds[coord].values, ds_ref[coord].values):
+            raise ValueError("Coordinates values for %s differ between datasets" % coord)
     return None

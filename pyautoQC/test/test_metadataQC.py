@@ -61,9 +61,17 @@ def test_compare_dict():
 
 def test_compare_dataset_dims():
     from pyautoQC.metadataQC import compare_dataset_dims
-
     # changing data should not trigger problem
     compare_dataset_dims(ds_d01, ds_ref)
     # changing dimensions should trigger problem
     with pytest.raises(ValueError):
         compare_dataset_dims(ds_d00, ds_ref)
+
+
+def test_compare_dataset_coords():
+    from pyautoQC.metadataQC import compare_dataset_coords
+    # changing data should not trigger problem
+    compare_dataset_coords(ds_d01, ds_ref)
+    # changing longitude array should trigger problem
+    with pytest.raises(ValueError):
+        compare_dataset_coords(ds_d02, ds_ref)
