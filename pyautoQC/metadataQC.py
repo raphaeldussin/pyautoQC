@@ -1,8 +1,7 @@
 import xarray as xr
 import numpy as np
 
-
-def compare_dict(mydict, dict_ref):
+def compare_dict(mydict, dict_ref,excluded_keys=None):
     ''' compare two dictionaries and print differences, if found'''
     # first compare that number of keys is the same
     nkeys_ref = len(dict_ref.keys())
@@ -12,11 +11,11 @@ def compare_dict(mydict, dict_ref):
                          (nkeys_ref, nkeys_cur))
     # second compare that the values are the same for each key
     for key in mydict.keys():
+        if key in excluded_keys: continue
         if mydict[key] != dict_ref[key]:
             raise ValueError("PROBLEM: key %s differs between reference (%s) and current (%s)" %
                              (key, dict_ref[key], mydict[key]))
     return None
-
 
 # Since we're raising exceptions, we need to make one function per test
 
