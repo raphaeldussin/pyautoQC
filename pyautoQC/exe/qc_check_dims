@@ -3,6 +3,8 @@
 import argparse
 import xarray as xr
 from pyautoQC.metadataQC import compare_dataset_dims
+import warnings
+
 
 parser = argparse.ArgumentParser(description='check dimensions of file \
                                               against reference file')
@@ -13,7 +15,12 @@ parser.add_argument("file_to_test", type=str,
 parser.add_argument("file_ref", type=str,
                     help="reference file")
 
+parser.add_argument("--Wall", help='show warnings')
+
 args = parser.parse_args()
+
+if not args.Wall:
+    warnings.filterwarnings("ignore")
 
 ds_test = xr.open_dataset(args.file_to_test)
 ds_ref = xr.open_dataset(args.file_ref)
