@@ -39,6 +39,11 @@ ds_d03 = xr.Dataset({'temperature': (['time', 'y', 'x'], temp)},
                             'lat': (['y', 'x'], lat),
                             'time': (['time'], [pd.Timestamp('1901-1-1')])})
 
+# CHANGE NAMES
+ds_d04 = xr.Dataset({'temperature': (['time', 'y', 'x'], temp)},
+                    coords={'lons': (['y', 'x'], lon),
+                            'lats': (['y', 'x'], lat),
+                            'time': (['time'], [pd.Timestamp('1901-1-1')])})
 
 def test_compare_dict():
     from pyautoQC.metadataQC import compare_dict
@@ -75,3 +80,6 @@ def test_compare_dataset_coords():
     # changing longitude array should trigger problem
     with pytest.raises(ValueError):
         compare_dataset_coords(ds_d02, ds_ref)
+    # changing names of lon/lat array should trigger problem
+    with pytest.raises(ValueError):
+        compare_dataset_coords(ds_d04, ds_ref)

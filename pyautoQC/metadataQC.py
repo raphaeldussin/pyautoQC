@@ -2,19 +2,27 @@ import xarray as xr
 import numpy as np
 
 
-def compare_dict(mydict, dict_ref):
+def compare_dict(mydict, dict_ref, keyname='key'):
     ''' compare two dictionaries and print differences, if found'''
     # first compare that number of keys is the same
     nkeys_ref = len(dict_ref.keys())
     nkeys_cur = len(mydict.keys())
     if nkeys_cur != nkeys_ref:
-        raise ValueError("PROBLEM: number of keys differs between reference (%g) and current (%g)" %
-                         (nkeys_ref, nkeys_cur))
+        raise ValueError("PROBLEM: number of %ss differs between reference (%g) and current (%g)" %
+                         (keyname, nkeys_ref, nkeys_cur))
+    # check consistency for name of keys
+    list_keys_cur = sorted(list(mydict.keys()))
+    list_keys_ref = sorted(list(dict_ref.keys()))
+    if list_keys_cur != list_keys_ref:
+        raise ValueError("PROBLEM list of %s are different between reference (%s) and current (%s)" %
+                         (keyname, list_keys_ref, list_keys_cur))
     # second compare that the values are the same for each key
     for key in mydict.keys():
-        if mydict[key] != dict_ref[key]:
-            raise ValueError("PROBLEM: key %s differs between reference (%s) and current (%s)" %
-                             (key, dict_ref[key], mydict[key]))
+        if type(mydict[key]) == xr.core.dataarray.DataArray:
+            pass
+        elif mydict[key] != dict_ref[key]:
+            raise ValueError("PROBLEM: %s %s differs between reference (%s) and current (%s)" %
+                             (keyname, key, dict_ref[key], mydict[key]))
     return None
 
 
@@ -22,19 +30,20 @@ def compare_dict(mydict, dict_ref):
 
 def compare_dataset_dims(myds, ds_ref):
     ''' check consistency of dimensions '''
-    if myds.dims != ds_ref.dims:
-        raise ValueError("Dimensions are inconsistent between datasets")
+    mydict = dict(myds.dims)
+    dict_ref = dict(ds_ref.dims)
+    compare_dict(mydict, dict_ref, keyname='dimension')
     return None
 
 
 def compare_dataset_coords(myds, ds_ref):
     ''' check consistency of coords '''
-    listcoords_ref = list(myds.coords)
-    listcoords_cur = list(ds_ref.coords)
+    coords_ref = dict(myds.coords)
+    coords_cur = dict(ds_ref.coords)
     # test number of coordinates
-    if listcoords_ref != listcoords_cur:
-        raise ValueError("Coordinates list are inconsistent")
+    compare_dict(coords_cur, coords_ref, keyname='coordinate')
     # remove time, in any
+    listcoords_cur = list(myds.coords)
     if 'time' in listcoords_cur:
         listcoords_cur.remove('time')
     # test the values of each coordinate
