@@ -3,6 +3,7 @@
 import argparse
 import xarray as xr
 from pyautoQC.metadataQC import compare_dataset_dims
+from pyautoQC.metadataQC import compare_dataset_coords
 import warnings
 
 
