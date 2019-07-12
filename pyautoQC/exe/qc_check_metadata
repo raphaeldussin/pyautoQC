@@ -26,7 +26,7 @@ if not args.Wall:
 ds_ref = xr.open_dataset(args.ref)
 
 for file_to_test in args.listfiles:
-    print('checking file ', file_to_test)
+    print('checking file ', file_to_test, 'against', args.ref)
     ds_test = xr.open_dataset(file_to_test)
     check, message = compare_dataset_dims(ds_test, ds_ref)
     if not check:
