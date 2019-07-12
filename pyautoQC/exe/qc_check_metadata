@@ -9,10 +9,10 @@ import warnings
 parser = argparse.ArgumentParser(description='check dimensions of all files \
                                               against reference file')
 
-parser.add_argument("files_to_test", type=list,
+parser.add_argument('-l','--listfiles', nargs='+', required=True,
                     help="files to test")
 
-parser.add_argument("file_ref", type=str,
+parser.add_argument('-r', '--ref', type=str, required=True,
                     help="reference file")
 
 parser.add_argument("--Wall", help='show warnings')
@@ -22,10 +22,14 @@ args = parser.parse_args()
 if not args.Wall:
     warnings.filterwarnings("ignore")
 
-ds_ref = xr.open_dataset(args.file_ref)
+ds_ref = xr.open_dataset(args.ref)
 
-for file_to_test in args.files_to_test:
-    ds_test = xr.open_dataset(args.file_to_test)
+for file_to_test in args.listfiles:
+    print('checking file ', file_to_test)
+    ds_test = xr.open_dataset(file_to_test)
     check, message = compare_dataset_dims(ds_test, ds_ref)
+    if not check:
+        print(message)
+    check, message = compare_dataset_coords(ds_test, ds_ref)
     if not check:
         print(message)
