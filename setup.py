@@ -12,5 +12,6 @@ setuptools.setup(
     url="https://github.com/raphaeldussin/pyautoQC",
     packages=['pyautoQC'],
     scripts=['pyautoQC/exe/qc_check_dims',
+             'pyautoQC/exe/qc_check_dims_all',
              'pyautoQC/exe/qc_check_coords']
 )
