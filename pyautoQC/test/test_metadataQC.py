@@ -1,4 +1,3 @@
-import pytest
 import xarray as xr
 import pandas as pd
 import numpy as np
@@ -45,6 +44,7 @@ ds_d04 = xr.Dataset({'temperature': (['time', 'y', 'x'], temp)},
                             'lats': (['y', 'x'], lat),
                             'time': (['time'], [pd.Timestamp('1901-1-1')])})
 
+
 def test_compare_dict():
     from pyautoQC.metadataQC import compare_dict
 
@@ -54,32 +54,45 @@ def test_compare_dict():
     dict_d = {'title': 'run1'}
 
     # test two identical dict does not return error
-    compare_dict(dict_a, dict_b)
+    check, message = compare_dict(dict_a, dict_b)
+    assert check
+    assert message == ''
     # test two different dict return error
-    with pytest.raises(ValueError):
-        compare_dict(dict_a, dict_c)
+    check, message = compare_dict(dict_a, dict_c)
+    assert not check
+    assert message != ''
     # test different number of keys return error
-    with pytest.raises(ValueError):
-        compare_dict(dict_a, dict_d)
+    check, message = compare_dict(dict_a, dict_d)
+    assert not check
+    assert message != ''
     return None
 
 
 def test_compare_dataset_dims():
     from pyautoQC.metadataQC import compare_dataset_dims
     # changing data should not trigger problem
-    compare_dataset_dims(ds_d01, ds_ref)
+    check, message = compare_dataset_dims(ds_d01, ds_ref)
+    assert check
+    assert message == ''
     # changing dimensions should trigger problem
-    with pytest.raises(ValueError):
-        compare_dataset_dims(ds_d00, ds_ref)
+    check, message = compare_dataset_dims(ds_d00, ds_ref)
+    assert not check
+    assert message != ''
+    return None
 
 
 def test_compare_dataset_coords():
     from pyautoQC.metadataQC import compare_dataset_coords
     # changing data should not trigger problem
-    compare_dataset_coords(ds_d01, ds_ref)
+    check, message = compare_dataset_coords(ds_d01, ds_ref)
+    assert check
+    assert message == ''
     # changing longitude array should trigger problem
-    with pytest.raises(ValueError):
-        compare_dataset_coords(ds_d02, ds_ref)
+    check, message = compare_dataset_coords(ds_d02, ds_ref)
+    assert not check
+    assert message != ''
     # changing names of lon/lat array should trigger problem
-    with pytest.raises(ValueError):
-        compare_dataset_coords(ds_d04, ds_ref)
+    check, message = compare_dataset_coords(ds_d04, ds_ref)
+    assert not check
+    assert message != ''
+    return None
