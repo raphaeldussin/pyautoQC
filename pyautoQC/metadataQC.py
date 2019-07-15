@@ -11,16 +11,17 @@ def compare_dict(mydict, dict_ref, keyname='key'):
     nkeys_cur = len(mydict.keys())
     if nkeys_cur != nkeys_ref:
         check = False
-        message = f'PROBLEM: number of {keyname}s differs between reference' + \
-                  f'({nkeys_ref}) and current ({nkeys_cur})\n'
+        message = f'PROBLEM: number of {keyname}s differs between ' + \
+                  f'reference ({nkeys_ref}) and current ({nkeys_cur})\n'
         return check, message
     # check consistency for name of keys
     list_keys_cur = sorted(list(mydict.keys()))
     list_keys_ref = sorted(list(dict_ref.keys()))
     if list_keys_cur != list_keys_ref:
         check = False
-        message = f'PROBLEM list of {keyname} are different between reference' + \
-                  f'({list_keys_ref}) and current ({list_keys_cur})\n'
+        message = f'PROBLEM list of {keyname} are different between ' + \
+                  f'reference ({list_keys_ref}) and current ' + \
+                  f'({list_keys_cur})\n'
         return check, message
     # second compare that the values are the same for each key
     for key in mydict.keys():
@@ -28,8 +29,9 @@ def compare_dict(mydict, dict_ref, keyname='key'):
             pass
         elif mydict[key] != dict_ref[key]:
             check = False
-            message += f'PROBLEM: {keyname} {key} differs between reference' + \
-                       f'({dict_ref[key]}) and current ({mydict[key]})\n'
+            message += f'PROBLEM: {keyname} {key} differs between ' + \
+                       f'reference ({dict_ref[key]}) and current ' + \
+                       f'({mydict[key]})\n'
     return check, message
 
 
