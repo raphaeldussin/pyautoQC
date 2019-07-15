@@ -10,7 +10,7 @@ import warnings
 parser = argparse.ArgumentParser(description='check dimensions of all files \
                                               against reference file')
 
-parser.add_argument('-l','--listfiles', nargs='+', required=True,
+parser.add_argument('-l', '--listfiles', nargs='+', required=True,
                     help="files to test")
 
 parser.add_argument('-r', '--ref', type=str, required=True,
