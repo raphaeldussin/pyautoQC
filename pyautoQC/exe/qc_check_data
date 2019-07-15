@@ -4,6 +4,8 @@ import argparse
 import xarray as xr
 from pyautoQC.dataQC import check_masksize, check_timeaxis
 from pyautoQC.dataQC import check_second_derivative
+from dask.distributed import Client, LocalCluster
+import subprocess
 
 import warnings
 
@@ -20,6 +22,15 @@ parser.add_argument('-v', '--listvar', nargs='+', required=True,
 parser.add_argument('-t', '--timechunk', type=int, required=True,
                     help="dask chunk for time")
 
+parser.add_argument('-x', '--lon', type=str, required=True,
+                    help="longitude dimension name")
+
+parser.add_argument('-y', '--lat', type=str, required=True,
+                    help="latitude dimension name")
+
+parser.add_argument('-z', '--depth', type=str, required=True,
+                    help="depth dimension name")
+
 parser.add_argument("--Wall", help='show warnings')
 
 args = parser.parse_args()
@@ -27,16 +38,26 @@ args = parser.parse_args()
 if not args.Wall:
     warnings.filterwarnings("ignore")
 
+# create the dask cluster
+#nodeip = subprocess.check_output('hostname -i', shell=True)
+#print('Create cluster at IP=', str(nodeip).replace('\n','') )
+#lc = LocalCluster(ip=nodeip, n_workers=1)
+#client = Client(lc)
+
 ds = xr.open_mfdataset(args.listfiles, chunks={'time': args.timechunk})
 
 check, message = check_timeaxis(ds)
-if not check:
+if check:
+    print('time axis looks ok')
+else:
     print(message)
 
 for var in args.listvar:
-    check, message = check_masksize(ds[var])
-    if not check:
+    check, message = check_masksize(ds[var], x=args.lon, y = args.lat, z=args.depth)
+    if check:
+        print('land/sea mask looks ok')
+    else:
         print(message)
-    check, message = check_second_derivative(ds[var])
-    if not check:
-        print(message)
+#    check, message = check_second_derivative(ds[var])
+#    if not check:
+#        print(message)

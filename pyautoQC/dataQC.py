@@ -13,9 +13,9 @@ def check_masksize(da, spval=1e+15, x='lon', y='lat', z='lev', time='time'):
     masksize = masked.where(masked == spval).count(dim=[x, y])
     # Check that land sea mask size has reasonable value
     masksize_surf = masksize.isel({z: 0, time: 0})
-    # land covers 29% of earth surface, we allow 10% error
+    # land covers 29% of earth surface, we allow 30% error
     expected = 0.29 * da[x].size * da[y].size
-    if not (0.9 * expected) < masksize_surf < (1.1 * expected):
+    if not (0.7 * expected) < masksize_surf.values < (1.3 * expected):
         check = False
         message = 'PROBLEM: mask size is not realistic'
         return check, message
@@ -42,9 +42,10 @@ def check_timeaxis(ds, time='time'):
     check = True
     message = ''
     tendency = ds[time].diff(dim=time)
-    if not np.timedelta64(28, 'D') <= tendency <= np.timedelta64(31, 'D'):
-        check = False
-        message = 'PROBLEM: records are not correctly spaced'
+    for dt in tendency:
+        if not np.timedelta64(28, 'D') <= dt <= np.timedelta64(31, 'D'):
+            check = False
+            message = 'PROBLEM: records are not correctly spaced'
     return check, message
 
 
