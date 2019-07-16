@@ -6,6 +6,7 @@ from pyautoQC.dataQC import check_masksize, check_timeaxis
 from pyautoQC.dataQC import check_second_derivative
 from dask.distributed import Client, LocalCluster
 import subprocess
+from dask_jobqueue import SLURMCluster
 
 import warnings
 
@@ -39,10 +40,13 @@ if not args.Wall:
     warnings.filterwarnings("ignore")
 
 # create the dask cluster
+cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o', memory="96GB")
+cluster.start_workers()
+client = Client(cluster)
+
 #nodeip = subprocess.check_output('hostname -i', shell=True)
 #print('Create cluster at IP=', str(nodeip).replace('\n','') )
 #lc = LocalCluster(ip=nodeip, n_workers=1)
-#client = Client(lc)
 
 ds = xr.open_mfdataset(args.listfiles, chunks={'time': args.timechunk})
 
