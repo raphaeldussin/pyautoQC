@@ -71,15 +71,15 @@ def check_second_derivative(da, x='lon', y='lat', z='lev', time='time'):
         message = 'PROBLEM: contiguous values along x axis'
         return check, message
 
-    if curv_y.values.any() == 0:
-        check = False
-        message = 'PROBLEM: contiguous values along y axis'
-        return check, message
-
-    if curv_z.values.any() == 0:
-        check = False
-        message = 'PROBLEM: contiguous values along z axis'
-        return check, message
+#    if curv_y.values.any() == 0:
+#        check = False
+#        message = 'PROBLEM: contiguous values along y axis'
+#        return check, message
+#
+#    if curv_z.values.any() == 0:
+#        check = False
+#        message = 'PROBLEM: contiguous values along z axis'
+#        return check, message
     # normal case
     return check, message
 
@@ -92,6 +92,12 @@ def check_stats(da, x='lon', y='lat', z='lev', time='time', tolerance=0.1):
     yearly_mean = yearly.mean(dim=[x, y, time])
     yearly_std = yearly.mean(dim=time).std(dim=y).mean(dim=[x])
     for year in yearly_mean.year:
+        if yearly_mean.sel(year=year).any() == 0.:
+            check = False
+            message = f'PROBLEM: found zero in mean for year {year}'
+        if yearly_std.sel(year=year).any() == 0.:
+            check = False
+            message = f'PROBLEM: found zero in std deviation for year {year}'
         if not np.allclose(yearly_mean.sel(year=year),
                            yearly_mean.isel(year=0),
                            rtol=tolerance):
@@ -104,6 +110,13 @@ def check_stats(da, x='lon', y='lat', z='lev', time='time', tolerance=0.1):
             check = False
             message = f'PROBLEM: statistics on yearly std deviation is ' + \
                       f'not within expected tolerance\n'
+
+    filename_mean = f'QC_mean_{da.name}_{da[x].size}x{da[y].size}_{da[time].values[0]}.nc'
+    filename_std = f'QC_std_{da.name}_{da[x].size}x{da[y].size}_{da[time].values[0]}.nc'
+    filename_mean = filename_mean.replace(' ','_')
+    filename_std = filename_std.replace(' ','_')
+    yearly_mean.to_netcdf(filename_mean, unlimited_dims='year')
+    yearly_std.to_netcdf(filename_std, unlimited_dims='year')
     return check, message
 
 

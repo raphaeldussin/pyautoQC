@@ -3,9 +3,9 @@
 import argparse
 import xarray as xr
 from pyautoQC.dataQC import check_masksize, check_timeaxis
-# from pyautoQC.dataQC import check_second_derivative
+from pyautoQC.dataQC import check_stats
+from pyautoQC.dataQC import check_second_derivative
 from dask.distributed import Client
-# import subprocess
 from dask_jobqueue import SLURMCluster
 import warnings
 
@@ -50,7 +50,7 @@ ds = xr.open_mfdataset(args.listfiles, chunks={'time': args.timechunk})
 
 check, message = check_timeaxis(ds)
 if check:
-    print('time axis looks ok')
+    print('QC: time axis looks normal')
 else:
     print(message)
 
@@ -58,11 +58,18 @@ for var in args.listvar:
     check, message = check_masksize(ds[var], x=args.lon, y=args.lat,
                                     z=args.depth)
     if check:
-        print('land/sea mask looks ok')
+        print('QC: land/sea mask looks normal')
     else:
         print(message)
-    # check, message = check_second_derivative(ds[var])
-    # if check:
-    #     print('no second derivative are zero')
-    # else:
-    #    print(message)
+    check, message = check_stats(ds[var], x=args.lon, y=args.lat,
+                                 z=args.depth)
+    if check:
+        print('QC: stats (means/std dev) looks normal')
+    else:
+       print(message)
+    check, message = check_second_derivative(ds[var], x=args.lon, y=args.lat,
+                                             z=args.depth)
+    if check:
+        print('QC: no second derivative are zero')
+    else:
+       print(message)
