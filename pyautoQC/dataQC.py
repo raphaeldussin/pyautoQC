@@ -7,12 +7,15 @@ def check_masksize(da, spval=1e+15, x='lon', y='lat', z='lev', time='time'):
 
     check = True
     message = ''
-    # xarray fills with NaN that are not convenient to work with
-    masked = da.fillna(spval)
     # compute the size of the mask in function of depth and time
-    masksize = masked.where(masked == spval).count(dim=[x, y])
+    nxypts = da[x].size * da[y].size
+    oceansize = da.count(dim=[x, y])
+    masksize = nxypts - oceansize
     # Check that land sea mask size has reasonable value
-    masksize_surf = masksize.isel({z: 0, time: 0})
+    if z in da.dims:
+        masksize_surf = masksize.isel({z: 0, time: 0})
+    else:
+        masksize_surf = masksize.isel({time: 0})
     # land covers 29% of earth surface, we allow 30% error
     expected = 0.29 * da[x].size * da[y].size
     if not (0.7 * expected) < masksize_surf.values < (1.3 * expected):
@@ -20,18 +23,22 @@ def check_masksize(da, spval=1e+15, x='lon', y='lat', z='lev', time='time'):
         message = 'PROBLEM: mask size is not realistic'
         return check, message
     # Check that the size does not change over time
-    masksize_3d = masksize.sum(dim=z)
-    tendency = masksize_3d.diff(dim=time)
+    if z in da.dims:
+        masksize_sum = masksize.sum(dim=z)
+    else:
+        masksize_sum = masksize
+    tendency = masksize_sum.diff(dim=time)
     if tendency.any() != 0:
         check = False
         message = 'PROBLEM: mask size is not constant in time'
         return check, message
-    # Check that mask size is increasing with depth
-    tendency = masksize.isel({time: 0}).diff(dim=z)
-    if tendency.any() < 0:
-        check = False
-        message = 'PROBLEM: mask size is decreasing with depth'
-        return check, message
+    if z in da.dims:
+        # Check that mask size is increasing with depth
+        tendency = masksize.isel({time: 0}).diff(dim=z)
+        if tendency.any() < 0:
+            check = False
+            message = 'PROBLEM: mask size is decreasing with depth'
+            return check, message
     # normal case
     return check, message
 

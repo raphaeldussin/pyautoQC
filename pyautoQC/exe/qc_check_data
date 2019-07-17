@@ -34,6 +34,9 @@ parser.add_argument('-z', '--depth', type=str, required=True,
 
 parser.add_argument("--Wall", help='show warnings')
 
+parser.add_argument('-w', '--worker', type=int, required=True,
+                    help="number of dask workers (i.e. nodes)" )
+
 args = parser.parse_args()
 
 if not args.Wall:
@@ -41,12 +44,8 @@ if not args.Wall:
 
 # create the dask cluster
 cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o', memory="96GB")
-cluster.start_workers()
+cluster.scale(args.worker)
 client = Client(cluster)
-
-#nodeip = subprocess.check_output('hostname -i', shell=True)
-#print('Create cluster at IP=', str(nodeip).replace('\n','') )
-#lc = LocalCluster(ip=nodeip, n_workers=1)
 
 ds = xr.open_mfdataset(args.listfiles, chunks={'time': args.timechunk})
 
@@ -62,6 +61,8 @@ for var in args.listvar:
         print('land/sea mask looks ok')
     else:
         print(message)
-#    check, message = check_second_derivative(ds[var])
-#    if not check:
-#        print(message)
+    #check, message = check_second_derivative(ds[var])
+    #if check:
+    #    print('no second derivative are zero')
+    #else:
+    #    print(message)
