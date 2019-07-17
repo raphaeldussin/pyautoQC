@@ -3,13 +3,11 @@
 import argparse
 import xarray as xr
 from pyautoQC.dataQC import check_masksize, check_timeaxis
-from pyautoQC.dataQC import check_second_derivative
-from dask.distributed import Client, LocalCluster
-import subprocess
+# from pyautoQC.dataQC import check_second_derivative
+from dask.distributed import Client
+# import subprocess
 from dask_jobqueue import SLURMCluster
-
 import warnings
-
 
 parser = argparse.ArgumentParser(description='check dimensions of all files \
                                               against reference file')
@@ -35,7 +33,7 @@ parser.add_argument('-z', '--depth', type=str, required=True,
 parser.add_argument("--Wall", help='show warnings')
 
 parser.add_argument('-w', '--worker', type=int, required=True,
-                    help="number of dask workers (i.e. nodes)" )
+                    help="number of dask workers (i.e. nodes)")
 
 args = parser.parse_args()
 
@@ -43,7 +41,8 @@ if not args.Wall:
     warnings.filterwarnings("ignore")
 
 # create the dask cluster
-cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o', memory="96GB")
+cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o',
+                       memory="96GB")
 cluster.scale(args.worker)
 client = Client(cluster)
 
@@ -56,13 +55,14 @@ else:
     print(message)
 
 for var in args.listvar:
-    check, message = check_masksize(ds[var], x=args.lon, y = args.lat, z=args.depth)
+    check, message = check_masksize(ds[var], x=args.lon, y=args.lat,
+                                    z=args.depth)
     if check:
         print('land/sea mask looks ok')
     else:
         print(message)
-    #check, message = check_second_derivative(ds[var])
-    #if check:
-    #    print('no second derivative are zero')
-    #else:
+    # check, message = check_second_derivative(ds[var])
+    # if check:
+    #     print('no second derivative are zero')
+    # else:
     #    print(message)

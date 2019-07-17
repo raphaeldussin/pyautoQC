@@ -84,9 +84,27 @@ def check_second_derivative(da, x='lon', y='lat', z='lev', time='time'):
     return check, message
 
 
-def check_stats(da, time='time'):
+def check_stats(da, x='lon', y='lat', z='lev', time='time', tolerance=0.1):
     """ check statistics of variable """
-    return None
+    check = True
+    message = ''
+    yearly = da.groupby(da.time.dt.year)
+    yearly_mean = yearly.mean(dim=[x, y, time])
+    yearly_std = yearly.mean(dim=time).std(dim=y).mean(dim=[x])
+    for year in yearly_mean.year:
+        if not np.allclose(yearly_mean.sel(year=year),
+                           yearly_mean.isel(year=0),
+                           rtol=tolerance):
+            check = False
+            message = f'PROBLEM: statistics on yearly means is not within' + \
+                      f'expected tolerance\n'
+        if not np.allclose(yearly_std.sel(year=year),
+                           yearly_std.isel(year=0),
+                           rtol=tolerance):
+            check = False
+            message = f'PROBLEM: statistics on yearly std deviation is ' + \
+                      f'not within expected tolerance\n'
+    return check, message
 
 
 def compute_spatial_average(variable, ds, ds_area=None, ds_vol=None,
