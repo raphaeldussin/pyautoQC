@@ -7,10 +7,10 @@ def check_masksize(da, spval=1e+15, x='lon', y='lat', z='lev', time='time'):
 
     check = True
     message = ''
-    # xarray fills with NaN that are not convenient to work with
-    masked = da.fillna(spval)
     # compute the size of the mask in function of depth and time
-    masksize = masked.where(masked == spval).count(dim=[x, y])
+    nxypts = da[x].size * da[y].size
+    oceansize = da.count(dim=[x, y])
+    masksize = nxypts - oceansize
     # Check that land sea mask size has reasonable value
     masksize_surf = masksize.isel({z: 0, time: 0})
     # land covers 29% of earth surface, we allow 30% error
