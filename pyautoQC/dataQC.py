@@ -75,3 +75,30 @@ def check_second_derivative(da, x='lon', y='lat', z='lev', time='time'):
         return check, message
     # normal case
     return check, message
+
+
+def check_stats(da, time='time'):
+    """ check statistics of variable """
+    return None
+
+
+def compute_spatial_average(variable, ds, ds_area=None, ds_vol=None,
+                            x='lon', y='lat', z='lev', time='time'):
+    """ compute the 2d/3d average of array """
+    if z in ds[variable].dims:  # 3D case
+        if ds_vol is None:  # we have already merged volcello in ds
+            volume = ds['volcello']
+        else:  # we need volcello from different dataset
+            volume = ds_vol['volcello']
+        weighted = (ds[variable] * volume).sum(dim=[x, y, z], skipna=True)
+        norm = volume.sum(dim=[x, y, z], skipna=True)
+        average = weighted / norm
+    else:  # 2D case
+        if ds_area is None:
+            area = ds['areacello']
+        else:
+            area = ds_area['areacello']
+        weighted = (ds[variable] * area).sum(dim=[x, y], skipna=True)
+        norm = area.sum(dim=[x, y], skipna=True)
+        average = weighted / norm
+    return average
