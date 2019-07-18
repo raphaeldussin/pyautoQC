@@ -6,8 +6,8 @@ notifications:
 matrix:
   fast_finish: true
   include:
-  - python: 3.7
-    env: CONDA_ENV=py37
+  - python: 3.6
+    env: CONDA_ENV=py36
 
 before_install:
   - wget https://repo.continuum.io/miniconda/Miniconda2-4.6.14-Linux-x86_64.sh -O miniconda.sh;
