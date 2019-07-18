@@ -23,15 +23,28 @@ ds_ref = xr.Dataset({'temperature': (['time', 'z', 'y', 'x'], temp_m_rand)},
                                                   periods=24, freq='1M')})
 
 # BAD TIME AXIS
-ds_test01 = ds_ref.copy(deep=True)
+ds_test01 = xr.Dataset({'temperature': (['time', 'z', 'y', 'x'], temp_m_rand)},
+                       coords={'lon': (['y', 'x'], lon),
+                               'lat': (['y', 'x'], lat),
+                               'z': (['z'], z),
+                               'time': pd.date_range(start='1900-1-1',
+                                                     periods=24, freq='1M')})
 ds_test01['time'].values[12:] = 0.
 
-ds_test02 = ds_ref.copy(deep=True)
-ds_test02['time'] = pd.date_range(start='1900-1-1', periods=24, freq='2M')
+ds_test02 = xr.Dataset({'temperature': (['time', 'z', 'y', 'x'], temp_m_rand)},
+                       coords={'lon': (['y', 'x'], lon),
+                               'lat': (['y', 'x'], lat),
+                               'z': (['z'], z),
+                               'time': pd.date_range(start='1900-1-1',
+                                                     periods=24, freq='2M')})
 
 # REPEATED VALUES ON X AXIS
-ds_test03 = ds_ref.copy(deep=True)
-ds_test03['temperature'].values[:] = temp_m
+ds_test03 = xr.Dataset({'temperature': (['time', 'z', 'y', 'x'], temp_m)},
+                       coords={'lon': (['y', 'x'], lon),
+                               'lat': (['y', 'x'], lat),
+                               'z': (['z'], z),
+                               'time': pd.date_range(start='1900-1-1',
+                                                     periods=24, freq='1M')})
 
 
 def test_check_timeaxis():
