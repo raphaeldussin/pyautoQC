@@ -49,6 +49,7 @@ def check_timeaxis(ds, time='time'):
     check = True
     message = ''
     tendency = ds[time].diff(dim=time)
+    print(tendency)
     for dt in tendency:
         if not np.timedelta64(28, 'D') <= dt <= np.timedelta64(31, 'D'):
             check = False
