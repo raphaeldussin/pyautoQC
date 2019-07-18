@@ -10,5 +10,7 @@ setuptools.setup(
     license="GPLv3",
     keywords="",
     url="https://github.com/raphaeldussin/pyautoQC",
-    packages=['pyautoQC']
+    packages=['pyautoQC'],
+    scripts=['pyautoQC/exe/qc_check_metadata',
+             'pyautoQC/exe/qc_check_data']
 )

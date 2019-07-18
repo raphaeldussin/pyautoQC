@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+
+import argparse
+import xarray as xr
+from pyautoQC.dataQC import check_masksize, check_timeaxis
+from pyautoQC.dataQC import check_stats
+from pyautoQC.dataQC import check_second_derivative
+from dask.distributed import Client
+from dask_jobqueue import SLURMCluster
+import warnings
+
+parser = argparse.ArgumentParser(description='check dimensions of all files \
+                                              against reference file')
+
+parser.add_argument('-l', '--listfiles', nargs='+', required=True,
+                    help="dataset files")
+
+parser.add_argument('-v', '--listvar', nargs='+', required=True,
+                    help="dataset variables")
+
+parser.add_argument('-t', '--timechunk', type=int, required=True,
+                    help="dask chunk for time")
+
+parser.add_argument('-x', '--lon', type=str, required=True,
+                    help="longitude dimension name")
+
+parser.add_argument('-y', '--lat', type=str, required=True,
+                    help="latitude dimension name")
+
+parser.add_argument('-z', '--depth', type=str, required=True,
+                    help="depth dimension name")
+
+parser.add_argument("--Wall", help='show warnings')
+
+parser.add_argument('-w', '--worker', type=int, required=True,
+                    help="number of dask workers (i.e. nodes)")
+
+args = parser.parse_args()
+
+if not args.Wall:
+    warnings.filterwarnings("ignore")
+
+# create the dask cluster
+cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o',
+                       memory="96GB")
+cluster.scale(args.worker)
+client = Client(cluster)
+
+ds = xr.open_mfdataset(args.listfiles, chunks={'time': args.timechunk})
+
+check, message = check_timeaxis(ds)
+if check:
+    print('QC: time axis looks normal')
+else:
+    print(message)
+
+for var in args.listvar:
+    check, message = check_masksize(ds[var], x=args.lon, y=args.lat,
+                                    z=args.depth)
+    if check:
+        print('QC: land/sea mask looks normal')
+    else:
+        print(message)
+    check, message = check_stats(ds[var], x=args.lon, y=args.lat,
+                                 z=args.depth)
+    if check:
+        print('QC: stats (means/std dev) looks normal')
+    else:
+       print(message)
+    check, message = check_second_derivative(ds[var], x=args.lon, y=args.lat,
+                                             z=args.depth)
+    if check:
+        print('QC: no second derivative are zero')
+    else:
+       print(message)
