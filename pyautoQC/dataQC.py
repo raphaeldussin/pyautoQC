@@ -63,8 +63,8 @@ def check_second_derivative(da, x='lon', y='lat', z='lev', time='time'):
     message = ''
 
     curv_x = da.diff(dim=x, n=2)
-    curv_y = da.diff(dim=y, n=2)
-    curv_z = da.diff(dim=z, n=2)
+    # curv_y = da.diff(dim=y, n=2)
+    # curv_z = da.diff(dim=z, n=2)
 
     if curv_x.values.any() == 0:
         check = False
@@ -111,10 +111,11 @@ def check_stats(da, x='lon', y='lat', z='lev', time='time', tolerance=0.1):
             message = f'PROBLEM: statistics on yearly std deviation is ' + \
                       f'not within expected tolerance\n'
 
-    filename_mean = f'QC_mean_{da.name}_{da[x].size}x{da[y].size}_{da[time].values[0]}.nc'
-    filename_std = f'QC_std_{da.name}_{da[x].size}x{da[y].size}_{da[time].values[0]}.nc'
-    filename_mean = filename_mean.replace(' ','_')
-    filename_std = filename_std.replace(' ','_')
+    filename_mean = f'QC_mean_{da.name}_{da[x].size}x{da[y].size}_' + \
+                    f'{da[time].values[0]}.nc'.replace(' ', '_')
+    filename_std = f'QC_std_{da.name}_{da[x].size}x{da[y].size}_' + \
+                   f'{da[time].values[0]}.nc'.replace(' ', '_')
+
     yearly_mean.to_netcdf(filename_mean, unlimited_dims='year')
     yearly_std.to_netcdf(filename_std, unlimited_dims='year')
     return check, message
