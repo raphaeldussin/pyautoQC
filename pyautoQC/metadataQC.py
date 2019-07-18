@@ -2,7 +2,7 @@ import xarray as xr
 import numpy as np
 
 
-def compare_dict(mydict, dict_ref, keyname='key', excluded_keys=None):
+def compare_dict(mydict, dict_ref, keyname='key', excluded_keys=[]):
     ''' compare two dictionaries and print differences, if found'''
     check = True
     message = ''
@@ -25,7 +25,8 @@ def compare_dict(mydict, dict_ref, keyname='key', excluded_keys=None):
         return check, message
     # second compare that the values are the same for each key
     for key in mydict.keys():
-        if key in excluded_keys or type(mydict[key]) == xr.core.dataarray.DataArray:
+        if key in excluded_keys or \
+           type(mydict[key]) == xr.core.dataarray.DataArray:
             pass
         elif mydict[key] != dict_ref[key]:
             check = False
@@ -33,6 +34,7 @@ def compare_dict(mydict, dict_ref, keyname='key', excluded_keys=None):
                        f'reference ({dict_ref[key]}) and current ' + \
                        f'({mydict[key]})\n'
     return check, message
+
 
 def compare_dataset_dims(myds, ds_ref):
     ''' check consistency of dimensions '''
