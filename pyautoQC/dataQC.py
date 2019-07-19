@@ -142,3 +142,27 @@ def compute_spatial_average(variable, ds, ds_area=None, ds_vol=None,
         norm = area.sum(dim=[x, y], skipna=True)
         average = weighted / norm
     return average
+
+
+def find_outlier(array, windowsize=12):
+    test = (array[windowsize/2:-windowsize/2+1] -
+            np.convolve(array, np.ones(windowsize), mode='valid'))
+    outlier = (test > 2 * np.std(array))
+    return outlier
+
+
+def check_outlier(variable, ds, z='z'):
+    check = False
+    message = ''
+    if z in ds.dims:
+        for k in ds.coords[z].values:
+            outlier = find_outlier(ds[variable].sel({z: k}))
+            if outlier.any():
+                check = False
+                message = f'found outlier at level {k}'
+    else:
+        outlier = find_outlier(ds[variable])
+        if outlier.any():
+            check = False
+            message = f'found outlier at level {k}'
+    return check, message
