@@ -13,8 +13,8 @@ parser = argparse.ArgumentParser(description='check dimensions of all files \
 parser.add_argument('-l', '--listfiles', nargs='+', required=True,
                     help="dataset files")
 
-# parser.add_argument('-v', '--listvar', nargs='+', required=True,
-#                    help="dataset variables")
+parser.add_argument('-v', '--listvar', nargs='+', required=True,
+                    help="dataset variables")
 
 # parser.add_argument('-t', '--timechunk', type=int, required=True,
 #                    help="dask chunk for time")
@@ -46,7 +46,7 @@ if not args.Wall:
 
 ds = xr.open_mfdataset(args.listfiles)
 
-for var in list(ds.variables):
+for var in list(args.listvar):
     check, message = check_outlier(var, ds, z=args.depth)
     if check:
         print('QC: no outlier found in global timeseries')

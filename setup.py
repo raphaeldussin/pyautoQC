@@ -12,5 +12,6 @@ setuptools.setup(
     url="https://github.com/raphaeldussin/pyautoQC",
     packages=['pyautoQC'],
     scripts=['pyautoQC/exe/qc_check_metadata',
-             'pyautoQC/exe/qc_check_data']
+             'pyautoQC/exe/qc_check_data',
+             'pyautoQC/exe/qc_postcheck_data']
 )

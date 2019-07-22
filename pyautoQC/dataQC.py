@@ -91,6 +91,8 @@ def check_stats(da, x='lon', y='lat', z='lev', time='time', tolerance=0.1):
     message = ''
     yearly = da.groupby(da.time.dt.year)
     yearly_mean = yearly.mean(dim=[x, y, time])
+    yearly_min = yearly.min(dim=[x, y, time])
+    yearly_max = yearly.max(dim=[x, y, time])
     yearly_std = yearly.mean(dim=time).std(dim=y).mean(dim=[x])
     for year in yearly_mean.year:
         if yearly_mean.sel(year=year).any() == 0.:
@@ -114,10 +116,19 @@ def check_stats(da, x='lon', y='lat', z='lev', time='time', tolerance=0.1):
 
     filename_mean = f'QC_mean_{da.name}_{da[x].size}x{da[y].size}_' + \
                     f'{da[time].values[0]}.nc'.replace(' ', '_')
+
+    filename_min = f'QC_min_{da.name}_{da[x].size}x{da[y].size}_' + \
+                   f'{da[time].values[0]}.nc'.replace(' ', '_')
+
+    filename_max = f'QC_max_{da.name}_{da[x].size}x{da[y].size}_' + \
+                   f'{da[time].values[0]}.nc'.replace(' ', '_')
+
     filename_std = f'QC_std_{da.name}_{da[x].size}x{da[y].size}_' + \
                    f'{da[time].values[0]}.nc'.replace(' ', '_')
 
     yearly_mean.to_netcdf(filename_mean, unlimited_dims='year')
+    yearly_min.to_netcdf(filename_min, unlimited_dims='year')
+    yearly_max.to_netcdf(filename_max, unlimited_dims='year')
     yearly_std.to_netcdf(filename_std, unlimited_dims='year')
     return check, message
 
@@ -145,24 +156,26 @@ def compute_spatial_average(variable, ds, ds_area=None, ds_vol=None,
 
 
 def find_outlier(array, windowsize=12):
-    test = (array[windowsize/2:-windowsize/2+1] -
-            np.convolve(array, np.ones(windowsize), mode='valid'))
+    imin=int(windowsize/2)
+    imax=int(-windowsize/2)+1
+    test = (array[imin:imax] -
+            np.convolve(array, np.ones(windowsize)/windowsize, mode='valid'))
     outlier = (test > 2 * np.std(array))
     return outlier
 
 
 def check_outlier(variable, ds, z='z'):
-    check = False
+    check = True
     message = ''
     if z in ds.dims:
         for k in ds.coords[z].values:
-            outlier = find_outlier(ds[variable].sel({z: k}))
+            outlier = find_outlier(ds[variable].sel({z: k}).values.squeeze())
             if outlier.any():
                 check = False
-                message = f'found outlier at level {k}'
+                message = f'found outlier at level {k}\n'
     else:
-        outlier = find_outlier(ds[variable])
+        outlier = find_outlier(ds[variable].values.squeeze())
         if outlier.any():
             check = False
-            message = f'found outlier at level {k}'
+            message = f'found outlier at level {k}\n'
     return check, message
