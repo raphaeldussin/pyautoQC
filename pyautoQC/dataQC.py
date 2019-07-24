@@ -35,7 +35,8 @@ def check_masksize(da, spval=1e+15, x='lon', y='lat', z='lev', time='time'):
         tendency = masksize.isel({time: 0}).diff(dim=z)
         if tendency.any() < 0:
             check = False
-            message = message + f'PROBLEM: mask size is decreasing with depth\n'
+            message = message + f'PROBLEM: mask size is decreasing ' + \
+                                f'with depth\n'
     return check, message
 
 
@@ -52,6 +53,7 @@ def check_timeaxis(ds, time='time'):
     elif expected_freq == '3hr':
         expected_min = np.timedelta64(3, 'h')
         expected_max = np.timedelta64(3, 'h')
+    #  elif other frequency (add here)
 
     tendency = ds[time].diff(dim=time)
     for dt in tendency:
@@ -76,7 +78,8 @@ def check_second_derivative(da, x='lon', y='lat', z='lev', time='time'):
     return check, message
 
 
-def check_stats(da, ds_attrs, dirout='./', x='lon', y='lat', z='lev', time='time', tolerance=0.1):
+def check_stats(da, ds_attrs, dirout='./', x='lon', y='lat', z='lev',
+                time='time', tolerance=0.1):
     """ check statistics of variable """
     attrs = dict(ds_attrs)
     check = True
@@ -91,22 +94,25 @@ def check_stats(da, ds_attrs, dirout='./', x='lon', y='lat', z='lev', time='time
     for year in yearly_mean.year:
         if yearly_mean.sel(year=year).any() == 0.:
             check = False
-            message = message + f'PROBLEM: found zero in mean for year {year}\n'
+            message = message + f'PROBLEM: found zero in mean ' + \
+                                f'for year {year}\n'
         if yearly_std.sel(year=year).any() == 0.:
             check = False
-            message = message + f'PROBLEM: found zero in std deviation for year {year}\n'
+            message = message + f'PROBLEM: found zero in std deviation ' + \
+                                f'for year {year}\n'
+# THIS IS MAKING FALSE POSITIVE, NOT GOOD USE OF STATS
 #       if not np.allclose(yearly_mean.sel(year=year),
 #                          yearly_mean.isel(year=0),
 #                          rtol=tolerance):
 #           check = False
-#           message = message + f'PROBLEM: statistics on yearly means is not within ' + \
-#                     f'expected tolerance\n'
+#           message = message + f'PROBLEM: statistics on yearly means is ' + \
+#                     f'not within expected tolerance\n'
 #       if not np.allclose(yearly_std.sel(year=year),
 #                          yearly_std.isel(year=0),
 #                          rtol=tolerance):
 #           check = False
-#           message = message + f'PROBLEM: statistics on yearly std deviation is ' + \
-#                     f'not within expected tolerance\n'
+#           message = message + f'PROBLEM: statistics on yearly ' + \
+#                     f'deviation is not within expected tolerance\n'
 
     filename_mean = f"{dirout}/QC_{attrs['source_id']}-" + \
                     f"{attrs['experiment_id']}_{attrs['grid_label']}_" + \
@@ -123,7 +129,6 @@ def check_stats(da, ds_attrs, dirout='./', x='lon', y='lat', z='lev', time='time
     filename_std = f"{dirout}/QC_{attrs['source_id']}-" + \
                    f"{attrs['experiment_id']}_{attrs['grid_label']}_" + \
                    f"std_{da.name}_{yearmin}-{yearmax}.nc"
-
 
     yearly_mean.to_netcdf(filename_mean, unlimited_dims='year')
     yearly_min.to_netcdf(filename_min, unlimited_dims='year')
@@ -155,8 +160,8 @@ def compute_spatial_average(variable, ds, ds_area=None, ds_vol=None,
 
 
 def find_outlier(array, windowsize=12):
-    imin=int(windowsize/2)
-    imax=int(-windowsize/2)+1
+    imin = int(windowsize/2)
+    imax = int(-windowsize/2)+1
     test = (array[imin:imax] -
             np.convolve(array, np.ones(windowsize)/windowsize, mode='valid'))
     outlier = (test > 2 * np.std(array))

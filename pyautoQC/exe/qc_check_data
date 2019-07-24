@@ -73,10 +73,10 @@ for var in args.listvar:
     if check:
         print('QC: stats (means/std dev) looks normal')
     else:
-       print(message)
+        print(message)
     check, message = check_second_derivative(ds[var], x=args.lon, y=args.lat,
                                              z=args.depth)
     if check:
         print('QC: no second derivative are zero')
     else:
-       print(message)
+        print(message)
