@@ -16,12 +16,11 @@ def check_masksize(da, spval=1e+15, x='lon', y='lat', z='lev', time='time'):
         masksize_surf = masksize.isel({z: 0, time: 0})
     else:
         masksize_surf = masksize.isel({time: 0})
-    # land covers 29% of earth surface, we allow 30% error
+    # land covers 29% of earth surface, we allow 50% relative error
     expected = 0.29 * da[x].size * da[y].size
-    if not (0.7 * expected) < masksize_surf.values < (1.3 * expected):
+    if not (0.5 * expected) < masksize_surf.values < (1.5 * expected):
         check = False
-        message = 'PROBLEM: mask size is not realistic'
-        return check, message
+        message = message + f'PROBLEM: mask size is not realistic\n'
     # Check that the size does not change over time
     if z in da.dims:
         masksize_sum = masksize.sum(dim=z)
@@ -30,16 +29,13 @@ def check_masksize(da, spval=1e+15, x='lon', y='lat', z='lev', time='time'):
     tendency = masksize_sum.diff(dim=time)
     if tendency.any() != 0:
         check = False
-        message = 'PROBLEM: mask size is not constant in time'
-        return check, message
+        message = message + f'PROBLEM: mask size is not constant in time\n'
     if z in da.dims:
         # Check that mask size is increasing with depth
         tendency = masksize.isel({time: 0}).diff(dim=z)
         if tendency.any() < 0:
             check = False
-            message = 'PROBLEM: mask size is decreasing with depth'
-            return check, message
-    # normal case
+            message = message + f'PROBLEM: mask size is decreasing with depth\n'
     return check, message
 
 
@@ -48,12 +44,20 @@ def check_timeaxis(ds, time='time'):
 
     check = True
     message = ''
+    attrs = dict(ds.attrs)
+    expected_freq = attrs['frequency']
+    if expected_freq == 'mon':
+        expected_min = np.timedelta64(28, 'D')
+        expected_max = np.timedelta64(31, 'D')
+    elif expected_freq == '3hr':
+        expected_min = np.timedelta64(3, 'h')
+        expected_max = np.timedelta64(3, 'h')
+
     tendency = ds[time].diff(dim=time)
-    print(tendency)
     for dt in tendency:
-        if not np.timedelta64(28, 'D') <= dt <= np.timedelta64(31, 'D'):
+        if not expected_min <= dt <= expected_max:
             check = False
-            message = 'PROBLEM: records are not correctly spaced'
+            message = message + f'PROBLEM: records are not correctly spaced\n'
     return check, message
 
 
@@ -64,29 +68,17 @@ def check_second_derivative(da, x='lon', y='lat', z='lev', time='time'):
     message = ''
 
     curv_x = da.diff(dim=x, n=2)
-    # curv_y = da.diff(dim=y, n=2)
-    # curv_z = da.diff(dim=z, n=2)
 
     if curv_x.values.any() == 0:
         check = False
-        message = 'PROBLEM: contiguous values along x axis'
-        return check, message
+        message = message + f'PROBLEM: contiguous values along x axis\n'
 
-#    if curv_y.values.any() == 0:
-#        check = False
-#        message = 'PROBLEM: contiguous values along y axis'
-#        return check, message
-#
-#    if curv_z.values.any() == 0:
-#        check = False
-#        message = 'PROBLEM: contiguous values along z axis'
-#        return check, message
-    # normal case
     return check, message
 
 
-def check_stats(da, x='lon', y='lat', z='lev', time='time', tolerance=0.1):
+def check_stats(da, ds_attrs, dirout='./', x='lon', y='lat', z='lev', time='time', tolerance=0.1):
     """ check statistics of variable """
+    attrs = dict(ds_attrs)
     check = True
     message = ''
     yearly = da.groupby(da.time.dt.year)
@@ -94,37 +86,44 @@ def check_stats(da, x='lon', y='lat', z='lev', time='time', tolerance=0.1):
     yearly_min = yearly.min(dim=[x, y, time])
     yearly_max = yearly.max(dim=[x, y, time])
     yearly_std = yearly.mean(dim=time).std(dim=y).mean(dim=[x])
+    yearmin = yearly_mean['year'].min().values
+    yearmax = yearly_mean['year'].max().values
     for year in yearly_mean.year:
         if yearly_mean.sel(year=year).any() == 0.:
             check = False
-            message = f'PROBLEM: found zero in mean for year {year}'
+            message = message + f'PROBLEM: found zero in mean for year {year}\n'
         if yearly_std.sel(year=year).any() == 0.:
             check = False
-            message = f'PROBLEM: found zero in std deviation for year {year}'
-        if not np.allclose(yearly_mean.sel(year=year),
-                           yearly_mean.isel(year=0),
-                           rtol=tolerance):
-            check = False
-            message = f'PROBLEM: statistics on yearly means is not within' + \
-                      f'expected tolerance\n'
-        if not np.allclose(yearly_std.sel(year=year),
-                           yearly_std.isel(year=0),
-                           rtol=tolerance):
-            check = False
-            message = f'PROBLEM: statistics on yearly std deviation is ' + \
-                      f'not within expected tolerance\n'
+            message = message + f'PROBLEM: found zero in std deviation for year {year}\n'
+#       if not np.allclose(yearly_mean.sel(year=year),
+#                          yearly_mean.isel(year=0),
+#                          rtol=tolerance):
+#           check = False
+#           message = message + f'PROBLEM: statistics on yearly means is not within ' + \
+#                     f'expected tolerance\n'
+#       if not np.allclose(yearly_std.sel(year=year),
+#                          yearly_std.isel(year=0),
+#                          rtol=tolerance):
+#           check = False
+#           message = message + f'PROBLEM: statistics on yearly std deviation is ' + \
+#                     f'not within expected tolerance\n'
 
-    filename_mean = f'QC_mean_{da.name}_{da[x].size}x{da[y].size}_' + \
-                    f'{da[time].values[0]}.nc'.replace(' ', '_')
+    filename_mean = f"{dirout}/QC_{attrs['source_id']}-" + \
+                    f"{attrs['experiment_id']}_{attrs['grid_label']}_" + \
+                    f"mean_{da.name}_{yearmin}-{yearmax}.nc"
 
-    filename_min = f'QC_min_{da.name}_{da[x].size}x{da[y].size}_' + \
-                   f'{da[time].values[0]}.nc'.replace(' ', '_')
+    filename_min = f"{dirout}/QC_{attrs['source_id']}-" + \
+                   f"{attrs['experiment_id']}_{attrs['grid_label']}_" + \
+                   f"min_{da.name}_{yearmin}-{yearmax}.nc"
 
-    filename_max = f'QC_max_{da.name}_{da[x].size}x{da[y].size}_' + \
-                   f'{da[time].values[0]}.nc'.replace(' ', '_')
+    filename_max = f"{dirout}/QC_{attrs['source_id']}-" + \
+                   f"{attrs['experiment_id']}_{attrs['grid_label']}_" + \
+                   f"max_{da.name}_{yearmin}-{yearmax}.nc"
 
-    filename_std = f'QC_std_{da.name}_{da[x].size}x{da[y].size}_' + \
-                   f'{da[time].values[0]}.nc'.replace(' ', '_')
+    filename_std = f"{dirout}/QC_{attrs['source_id']}-" + \
+                   f"{attrs['experiment_id']}_{attrs['grid_label']}_" + \
+                   f"std_{da.name}_{yearmin}-{yearmax}.nc"
+
 
     yearly_mean.to_netcdf(filename_mean, unlimited_dims='year')
     yearly_min.to_netcdf(filename_min, unlimited_dims='year')

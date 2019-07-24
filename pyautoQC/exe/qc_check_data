@@ -35,6 +35,9 @@ parser.add_argument("--Wall", help='show warnings')
 parser.add_argument('-w', '--worker', type=int, required=True,
                     help="number of dask workers (i.e. nodes)")
 
+parser.add_argument('-o', '--outputdir', type=str, required=False,
+                    help="output directory")
+
 args = parser.parse_args()
 
 if not args.Wall:
@@ -42,7 +45,7 @@ if not args.Wall:
 
 # create the dask cluster
 cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o',
-                       memory="96GB")
+                       walltime="02:00:00", memory="96GB")
 cluster.scale(args.worker)
 client = Client(cluster)
 
@@ -61,8 +64,12 @@ for var in args.listvar:
         print('QC: land/sea mask looks normal')
     else:
         print(message)
-    check, message = check_stats(ds[var], x=args.lon, y=args.lat,
-                                 z=args.depth)
+    if args.outputdir is not None:
+        check, message = check_stats(ds[var], ds.attrs, x=args.lon, y=args.lat,
+                                     z=args.depth, dirout=args.outputdir)
+    else:
+        check, message = check_stats(ds[var], ds.attrs, x=args.lon, y=args.lat,
+                                     z=args.depth)
     if check:
         print('QC: stats (means/std dev) looks normal')
     else:
