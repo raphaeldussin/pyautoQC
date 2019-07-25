@@ -160,17 +160,12 @@ def compute_spatial_average(variable, ds, ds_area=None, ds_vol=None,
 
 
 def find_outlier(array, windowsize=12):
-    imin = int(windowsize/2)
-    imax = int(-windowsize/2)+1
-    test = (array[imin:imax] -
-            np.convolve(array, np.ones(windowsize)/windowsize, mode='valid'))
-    outlier = (test > 2 * np.std(array))
+    test = (array - rmean(array, t=windowsize))
+    outlier = (test > 3 * np.std(array))
     return outlier
 
 
 def check_outlier(variable, ds, z='z', windowsize=12):
-    imin = int(windowsize/2)
-    imax = int(-windowsize/2)+1
     check = True
     message = ''
     if z in ds.dims:
@@ -178,13 +173,22 @@ def check_outlier(variable, ds, z='z', windowsize=12):
         for k in ds.coords[z].values:
             outlier = find_outlier(ds[variable].sel({z: k}).sortby(ds.year).values.squeeze(), windowsize=windowsize)
             if outlier.any():
-                outlier_years = ds['year'].sortby(ds.year).isel(year=slice(imin, imax)).where(outlier).dropna(dim='year').values
+                outlier_years = ds['year'].where(outlier).dropna(dim='year').values
                 check = False
                 message = f'PROBLEM: found outlier at depth {k} in year(s) {outlier_years}\n'
     else:
         outlier = find_outlier(ds[variable].sortby(ds.year).values.squeeze(), windowsize=windowsize)
         if outlier.any():
-            outlier_years = ds['year'].sortby(ds.year).isel(year=slice(imin, imax)).where(outlier).dropna(dim='year').values
+            outlier_years = ds['year'].where(outlier).dropna(dim='year').values
             check = False
             message = f'PROBLEM: found outlier in year(s) {outlier_years}\n'
     return check, message
+
+
+def rmean(a, t=12):
+    r = np.zeros(a.shape)
+    r[0] = a[0]
+    alpha = 1/t
+    for k in range(1,a.shape[0]):
+        r[k] = alpha * a[k] + (1-alpha) * r[k-1]
+    return r
