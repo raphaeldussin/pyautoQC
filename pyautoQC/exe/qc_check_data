@@ -8,6 +8,7 @@ from pyautoQC.dataQC import check_second_derivative
 from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
 import warnings
+import uuid
 
 parser = argparse.ArgumentParser(description='check dimensions of all files \
                                               against reference file')
@@ -44,8 +45,9 @@ if not args.Wall:
     warnings.filterwarnings("ignore")
 
 # create the dask cluster
+clusterid = uuid.uuid4().hex
 cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o',
-                       walltime="02:00:00", memory="96GB")
+                       walltime="02:00:00", memory="96GB", name=f"QC_dask_{clusterid}")
 cluster.scale(args.worker)
 client = Client(cluster)
 
