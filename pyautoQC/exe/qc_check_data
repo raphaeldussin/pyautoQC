@@ -19,7 +19,7 @@ parser.add_argument('-l', '--listfiles', nargs='+', required=True,
 parser.add_argument('-v', '--listvar', nargs='+', required=True,
                     help="dataset variables")
 
-parser.add_argument('-t', '--timechunk', type=int, required=True,
+parser.add_argument('-t', '--timechunk', type=int, required=False,
                     help="dask chunk for time")
 
 parser.add_argument('-x', '--lon', type=str, required=True,
@@ -44,6 +44,11 @@ args = parser.parse_args()
 if not args.Wall:
     warnings.filterwarnings("ignore")
 
+if args.outputdir is not None:
+    outputdir = args.outputdir
+else:
+    outputdir = './'
+
 # create the dask cluster
 clusterid = uuid.uuid4().hex
 cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o',
@@ -51,31 +56,37 @@ cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o',
 cluster.scale(args.worker)
 client = Client(cluster)
 
-ds = xr.open_mfdataset(args.listfiles, chunks={'time': args.timechunk})
-
-check, message = check_timeaxis(ds)
-if check:
-    print('QC: time axis looks normal')
+if args.timechunk is not None:
+    ds = xr.open_mfdataset(args.listfiles, chunks={'time': args.timechunk})
 else:
-    print(message)
+    ds = xr.open_mfdataset(args.listfiles)
+
+if 'time' in ds.dims:
+    check, message = check_timeaxis(ds)
+    if check:
+        print('QC: time axis looks normal')
+    else:
+        print(message)
 
 for var in args.listvar:
+    # check the mask size
     check, message = check_masksize(ds[var], x=args.lon, y=args.lat,
                                     z=args.depth)
     if check:
         print('QC: land/sea mask looks normal')
     else:
         print(message)
-    if args.outputdir is not None:
+
+    # check/compute basic stats
+    if 'time' in ds[var].dims:
         check, message = check_stats(ds[var], ds.attrs, x=args.lon, y=args.lat,
-                                     z=args.depth, dirout=args.outputdir)
-    else:
-        check, message = check_stats(ds[var], ds.attrs, x=args.lon, y=args.lat,
-                                     z=args.depth)
-    if check:
-        print('QC: stats (means/std dev) looks normal')
-    else:
-        print(message)
+                                     z=args.depth, dirout=outputdir)
+        if check:
+            print('QC: stats (means/std dev) looks normal')
+        else:
+            print(message)
+
+    # second derivative check
     check, message = check_second_derivative(ds[var], x=args.lon, y=args.lat,
                                              z=args.depth)
     if check:

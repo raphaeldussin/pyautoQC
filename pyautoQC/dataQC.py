@@ -7,32 +7,50 @@ def check_masksize(da, spval=1e+15, x='lon', y='lat', z='lev', time='time'):
 
     check = True
     message = ''
+    # check that there is no values greater than missing value (bad missing value)
+    if '_FillValue' in da.encoding:
+        expected_fill = da.encoding['_FillValue']
+    else:
+        check = False
+        message = message + f'PROBLEM: found FillValue is not set\n'
+        expected_fill = 1.e+20
+    if np.abs(da.values).max() > expected_fill:
+        check = False
+        message = message + f'PROBLEM: found value greater than FillValue\n'
     # compute the size of the mask in function of depth and time
     nxypts = da[x].size * da[y].size
     oceansize = da.count(dim=[x, y])
     masksize = nxypts - oceansize
     # Check that land sea mask size has reasonable value
     if z in da.dims:
-        masksize_surf = masksize.isel({z: 0, time: 0})
+        masksize_surf = masksize.isel({z: 0})
     else:
-        masksize_surf = masksize.isel({time: 0})
+        masksize_surf = masksize
+    if 'time' in da.dims:
+        masksize_surf_init = masksize_surf.isel({'time': 0})
+    else:
+        masksize_surf_init = masksize_surf
     # land covers 29% of earth surface, we allow 50% relative error
     expected = 0.29 * da[x].size * da[y].size
-    if not (0.5 * expected) < masksize_surf.values < (1.5 * expected):
+    if not (0.5 * expected) < masksize_surf_init.values < (1.5 * expected):
         check = False
         message = message + f'PROBLEM: mask size is not realistic\n'
     # Check that the size does not change over time
+    if 'time' in da.dims:
+        if z in da.dims:
+            masksize_sum = masksize.sum(dim=z)
+        else:
+            masksize_sum = masksize
+        tendency = masksize_sum.diff(dim=time)
+        if tendency.any() != 0:
+            check = False
+            message = message + f'PROBLEM: mask size is not constant in time\n'
+    # Check that mask size is increasing with depth
     if z in da.dims:
-        masksize_sum = masksize.sum(dim=z)
-    else:
-        masksize_sum = masksize
-    tendency = masksize_sum.diff(dim=time)
-    if tendency.any() != 0:
-        check = False
-        message = message + f'PROBLEM: mask size is not constant in time\n'
-    if z in da.dims:
-        # Check that mask size is increasing with depth
-        tendency = masksize.isel({time: 0}).diff(dim=z)
+        if 'time' in da.dims:
+            tendency = masksize.isel({time: 0}).diff(dim=z)
+        else:
+            tendency = masksize.diff(dim=z)
         if tendency.any() < 0:
             check = False
             message = message + f'PROBLEM: mask size is decreasing ' + \
