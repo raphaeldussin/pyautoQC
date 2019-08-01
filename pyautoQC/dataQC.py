@@ -102,22 +102,28 @@ def check_stats(da, ds_attrs, dirout='./', x='lon', y='lat', z='lev',
     attrs = dict(ds_attrs)
     check = True
     message = ''
-    yearly = da.groupby(da.time.dt.year)
-    yearly_mean = yearly.mean(dim=[x, y, time])
-    yearly_min = yearly.min(dim=[x, y, time])
-    yearly_max = yearly.max(dim=[x, y, time])
-    yearly_std = yearly.mean(dim=time).std(dim=y).mean(dim=[x])
-    yearmin = str(yearly_mean['year'].min().values).zfill(4)
-    yearmax = str(yearly_mean['year'].max().values).zfill(4)
-    for year in yearly_mean.year:
-        if yearly_mean.sel(year=year).any() == 0.:
-            check = False
-            message = message + f'PROBLEM: found zero in mean ' + \
-                                f'for year {year}\n'
-        if yearly_std.sel(year=year).any() == 0.:
-            check = False
-            message = message + f'PROBLEM: found zero in std deviation ' + \
-                                f'for year {year}\n'
+    ts_min = da.min(dim=[x, y])
+    ts_max = da.max(dim=[x, y])
+    ts_mean = da.mean(dim=[x, y])
+    #ts_std = da.mean(dim=time).std(dim=y).mean(dim=[x])
+    #yearly = da.groupby(da.time.dt.year)
+    #yearly_mean = yearly.mean(dim=[x, y, time])
+    #yearly_min = yearly.min(dim=[x, y, time])
+    #yearly_max = yearly.max(dim=[x, y, time])
+    #yearly_std = yearly.mean(dim=time).std(dim=y).mean(dim=[x])
+    #yearmin = str(yearly['year'].min().values).zfill(4)
+    #yearmax = str(yearly['year'].max().values).zfill(4)
+    yearmin = str(da[time].dt.year.min().values).zfill(4)
+    yearmax = str(da[time].dt.year.max().values).zfill(4)
+#    for year in yearly_mean.year:
+#        if yearly_mean.sel(year=year).any() == 0.:
+#            check = False
+#            message = message + f'PROBLEM: found zero in mean ' + \
+#                                f'for year {year}\n'
+#        if yearly_std.sel(year=year).any() == 0.:
+#            check = False
+#            message = message + f'PROBLEM: found zero in std deviation ' + \
+#                                f'for year {year}\n'
 # THIS IS MAKING FALSE POSITIVE, NOT GOOD USE OF STATS
 #       if not np.allclose(yearly_mean.sel(year=year),
 #                          yearly_mean.isel(year=0),
@@ -148,10 +154,13 @@ def check_stats(da, ds_attrs, dirout='./', x='lon', y='lat', z='lev',
                    f"{attrs['experiment_id']}_{attrs['grid_label']}_" + \
                    f"std_{da.name}_{yearmin}-{yearmax}.nc"
 
-    yearly_mean.to_netcdf(filename_mean, unlimited_dims='year')
-    yearly_min.to_netcdf(filename_min, unlimited_dims='year')
-    yearly_max.to_netcdf(filename_max, unlimited_dims='year')
-    yearly_std.to_netcdf(filename_std, unlimited_dims='year')
+    #yearly_mean.to_netcdf(filename_mean, unlimited_dims='year')
+    ts_mean.to_netcdf(filename_mean, unlimited_dims='year')
+    ts_min.to_netcdf(filename_min, unlimited_dims='time')
+    ts_max.to_netcdf(filename_max, unlimited_dims='time')
+    #yearly_min.to_netcdf(filename_min, unlimited_dims='year')
+    #yearly_max.to_netcdf(filename_max, unlimited_dims='year')
+    #yearly_std.to_netcdf(filename_std, unlimited_dims='year')
     return check, message
 
 
@@ -183,23 +192,25 @@ def find_outlier(array, windowsize=12):
     return outlier
 
 
-def check_outlier(variable, ds, z='z', windowsize=12):
+def check_outlier(variable, ds, z='z', windowsize=12, time='time'):
     check = True
     message = ''
     if z in ds.dims:
         print('3D field')
         for k in ds.coords[z].values:
-            outlier = find_outlier(ds[variable].sel({z: k}).sortby(ds.year).values.squeeze(), windowsize=windowsize)
+            outlier = find_outlier(ds[variable].sel({z: k}).sortby(ds[time]).values.squeeze(),
+                                   windowsize=windowsize)
             if outlier.any():
-                outlier_years = ds['year'].where(outlier).dropna(dim='year').values
+                outlier_time = ds[time].where(outlier).dropna(dim=time).values
                 check = False
-                message = f'PROBLEM: found outlier at depth {k} in year(s) {outlier_years}\n'
+                message = f'PROBLEM: found outlier at depth {k} in date(s) {outlier_time}\n'
     else:
-        outlier = find_outlier(ds[variable].sortby(ds.year).values.squeeze(), windowsize=windowsize)
+        outlier = find_outlier(ds[variable].sortby(ds[time]).values.squeeze(),
+                               windowsize=windowsize)
         if outlier.any():
-            outlier_years = ds['year'].where(outlier).dropna(dim='year').values
+            outlier_time = ds[time].where(outlier).dropna(dim=time).values
             check = False
-            message = f'PROBLEM: found outlier in year(s) {outlier_years}\n'
+            message = f'PROBLEM: found outlier in year(s) {outlier_time}\n'
     return check, message
 
 
