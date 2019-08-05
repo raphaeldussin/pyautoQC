@@ -1,4 +1,9 @@
 import numpy as np
+import matplotlib.pylab as plt
+try:
+    import nc_time_axis
+except:
+    print('please run conda install -c conda-forge nc-time-axis')
 
 
 def check_masksize(da, spval=1e+15, x='lon', y='lat', z='lev', time='time'):
@@ -188,29 +193,32 @@ def compute_spatial_average(variable, ds, ds_area=None, ds_vol=None,
 
 def find_outlier(array, windowsize=12):
     test = (array - rmean(array, t=windowsize))
-    outlier = (test > 3 * np.std(array))
+    outlier = (np.abs(test) > 3 * np.std(array))
     return outlier
 
 
-def check_outlier(variable, ds, z='z', windowsize=12, time='time'):
+def check_outlier(variable, ds, z='z', windowsize=12, time='time', tag='', output='./'):
     check = True
     message = ''
     if z in ds.dims:
-        print('3D field')
         for k in ds.coords[z].values:
-            outlier = find_outlier(ds[variable].sel({z: k}).sortby(ds[time]).values.squeeze(),
+            da = ds[variable].sel({z: k}).sortby(ds[time])
+            outlier = find_outlier(da.values.squeeze(),
                                    windowsize=windowsize)
             if outlier.any():
                 outlier_time = ds[time].where(outlier).dropna(dim=time).values
                 check = False
                 message = f'PROBLEM: found outlier at depth {k} in date(s) {outlier_time}\n'
+                make_outlier_plot(da, outlier, tag=f"{tag}_z{da[z].values}", output=output)
     else:
-        outlier = find_outlier(ds[variable].sortby(ds[time]).values.squeeze(),
+        da = ds[variable].sortby(ds[time])
+        outlier = find_outlier(da.values.squeeze(),
                                windowsize=windowsize)
         if outlier.any():
             outlier_time = ds[time].where(outlier).dropna(dim=time).values
             check = False
             message = f'PROBLEM: found outlier in year(s) {outlier_time}\n'
+            make_outlier_plot(da, outlier, tag=f"{tag}", output=output)
     return check, message
 
 
@@ -221,3 +229,14 @@ def rmean(a, t=12):
     for k in range(1,a.shape[0]):
         r[k] = alpha * a[k] + (1-alpha) * r[k-1]
     return r
+
+
+def make_outlier_plot(da, outlier, tag='', output='./'):
+    ''' make the plot with outlier in red '''
+    filename = f"{output}/{da.name}_{tag}.png"
+    da.plot.line(x='time')
+    da.where(outlier).plot.line(x='time', color='k', marker='o')
+    plt.savefig(filename)
+    plt.close()
+    return None
+

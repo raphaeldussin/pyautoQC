@@ -6,7 +6,11 @@ conda activate devQC
 source_id=GFDL-ESM4
 exp_id=piControl
 dirrun=/data_cmip6/CMIP6/CMIP/NOAA-GFDL/${source_id}/${exp_id}/r1i1p1f1/Omon
-dirout=/work/Raphael.Dussin/QC_results/${source_id}-${exp_id}
+dirout=/work/Raphael.Dussin/QC_results/${source_id}-${exp_id}_Omon
+dirpng=/work/Raphael.Dussin/QC_results/${source_id}-${exp_id}_Omon/pngs
+
+mkdir -p $dirout
+mkdir -p $dirpng
 
 listvar="thetao so volcello hfds sos tauuo tauvo tos"
 
@@ -43,7 +47,13 @@ for var in $listvar ; do
         fi
       done
 
-      qc_postcheck_data -l $dirout/QC_${source_id}-${exp_id}_${grid}_mean_${var}*.nc -v ${var} -z lev
+      tagout=${source_id}-${exp_id}_${grid} 
+      echo checking for outliers in mean timeserie
+      qc_postcheck_data -l $dirout/QC_${tagout}_mean_${var}*.nc -v ${var} -z lev -t ${tagout}_mean -o $dirpng
+      echo checking for outliers in min timeserie
+      qc_postcheck_data -l $dirout/QC_${tagout}_min_${var}*.nc -v ${var} -z lev -t ${tagout}_min -o $dirpng
+      echo checking for outliers in max timeserie
+      qc_postcheck_data -l $dirout/QC_${tagout}_max_${var}*.nc -v ${var} -z lev -t ${tagout}_max -o $dirpng
 
       # option 2: one global test (dask memory leak)
 #     echo working on file $files

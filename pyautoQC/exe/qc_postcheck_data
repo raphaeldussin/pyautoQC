@@ -17,6 +17,12 @@ parser.add_argument('-v', '--listvar', nargs='+', required=True,
 parser.add_argument('-z', '--depth', type=str, required=True,
                     help="depth dimension name")
 
+parser.add_argument('-t', '--tag', type=str, required=True,
+                    help="filename tag")
+
+parser.add_argument('-o', '--output', type=str, required=True,
+                    help="output dir for png files")
+
 parser.add_argument("--Wall", help='show warnings')
 
 args = parser.parse_args()
@@ -24,10 +30,10 @@ args = parser.parse_args()
 if not args.Wall:
     warnings.filterwarnings("ignore")
 
-ds = xr.open_mfdataset(args.listfiles)
+ds = xr.open_mfdataset(args.listfiles, use_cftime=True)
 
 for var in list(args.listvar):
-    check, message = check_outlier(var, ds, z=args.depth)
+    check, message = check_outlier(var, ds, z=args.depth, tag=args.tag, output=args.output)
     if check:
         print('QC: no outlier found in global timeseries')
     else:
