@@ -33,7 +33,8 @@ if not args.Wall:
 ds = xr.open_mfdataset(args.listfiles, use_cftime=True)
 
 for var in list(args.listvar):
-    check, message = check_outlier(var, ds, z=args.depth, tag=args.tag, output=args.output)
+    check, message = check_outlier(var, ds, z=args.depth, tag=args.tag,
+                                   output=args.output)
     if check:
         print('QC: no outlier found in global timeseries')
     else:

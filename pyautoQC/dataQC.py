@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pylab as plt
 try:
     import nc_time_axis
-except:
+except ImportError:
     print('please run conda install -c conda-forge nc-time-axis')
 
 
@@ -12,7 +12,7 @@ def check_masksize(da, spval=1e+15, x='lon', y='lat', z='lev', time='time'):
 
     check = True
     message = ''
-    # check that there is no values greater than missing value (bad missing value)
+    # check that there is no values greater than missing value (bad missing)
     if '_FillValue' in da.encoding:
         expected_fill = da.encoding['_FillValue']
     else:
@@ -110,14 +110,14 @@ def check_stats(da, ds_attrs, dirout='./', x='lon', y='lat', z='lev',
     ts_min = da.min(dim=[x, y])
     ts_max = da.max(dim=[x, y])
     ts_mean = da.mean(dim=[x, y])
-    #ts_std = da.mean(dim=time).std(dim=y).mean(dim=[x])
-    #yearly = da.groupby(da.time.dt.year)
-    #yearly_mean = yearly.mean(dim=[x, y, time])
-    #yearly_min = yearly.min(dim=[x, y, time])
-    #yearly_max = yearly.max(dim=[x, y, time])
-    #yearly_std = yearly.mean(dim=time).std(dim=y).mean(dim=[x])
-    #yearmin = str(yearly['year'].min().values).zfill(4)
-    #yearmax = str(yearly['year'].max().values).zfill(4)
+    # ts_std = da.mean(dim=time).std(dim=y).mean(dim=[x])
+    # yearly = da.groupby(da.time.dt.year)
+    # yearly_mean = yearly.mean(dim=[x, y, time])
+    # yearly_min = yearly.min(dim=[x, y, time])
+    # yearly_max = yearly.max(dim=[x, y, time])
+    # yearly_std = yearly.mean(dim=time).std(dim=y).mean(dim=[x])
+    # yearmin = str(yearly['year'].min().values).zfill(4)
+    # yearmax = str(yearly['year'].max().values).zfill(4)
     yearmin = str(da[time].dt.year.min().values).zfill(4)
     yearmax = str(da[time].dt.year.max().values).zfill(4)
 #    for year in yearly_mean.year:
@@ -159,13 +159,13 @@ def check_stats(da, ds_attrs, dirout='./', x='lon', y='lat', z='lev',
                    f"{attrs['experiment_id']}_{attrs['grid_label']}_" + \
                    f"std_{da.name}_{yearmin}-{yearmax}.nc"
 
-    #yearly_mean.to_netcdf(filename_mean, unlimited_dims='year')
+    # yearly_mean.to_netcdf(filename_mean, unlimited_dims='year')
     ts_mean.to_netcdf(filename_mean, unlimited_dims='year')
     ts_min.to_netcdf(filename_min, unlimited_dims='time')
     ts_max.to_netcdf(filename_max, unlimited_dims='time')
-    #yearly_min.to_netcdf(filename_min, unlimited_dims='year')
-    #yearly_max.to_netcdf(filename_max, unlimited_dims='year')
-    #yearly_std.to_netcdf(filename_std, unlimited_dims='year')
+    # yearly_min.to_netcdf(filename_min, unlimited_dims='year')
+    # yearly_max.to_netcdf(filename_max, unlimited_dims='year')
+    # yearly_std.to_netcdf(filename_std, unlimited_dims='year')
     return check, message
 
 
@@ -197,7 +197,8 @@ def find_outlier(array, windowsize=12):
     return outlier
 
 
-def check_outlier(variable, ds, z='z', windowsize=12, time='time', tag='', output='./'):
+def check_outlier(variable, ds, z='z', windowsize=12, time='time', tag='',
+                  output='./'):
     check = True
     message = ''
     if z in ds.dims:
@@ -208,8 +209,10 @@ def check_outlier(variable, ds, z='z', windowsize=12, time='time', tag='', outpu
             if outlier.any():
                 outlier_time = ds[time].where(outlier).dropna(dim=time).values
                 check = False
-                message = f'PROBLEM: found outlier at depth {k} in date(s) {outlier_time}\n'
-                make_outlier_plot(da, outlier, tag=f"{tag}_z{da[z].values}", output=output)
+                message = f'PROBLEM: found outlier at depth {k} in ' + \
+                          f'date(s) {outlier_time}\n'
+                make_outlier_plot(da, outlier, tag=f"{tag}_z{da[z].values}",
+                                  output=output)
     else:
         da = ds[variable].sortby(ds[time])
         outlier = find_outlier(da.values.squeeze(),
@@ -226,7 +229,7 @@ def rmean(a, t=12):
     r = np.zeros(a.shape)
     r[0] = a[0]
     alpha = 1/t
-    for k in range(1,a.shape[0]):
+    for k in range(1, a.shape[0]):
         r[k] = alpha * a[k] + (1-alpha) * r[k-1]
     return r
 
@@ -239,4 +242,3 @@ def make_outlier_plot(da, outlier, tag='', output='./'):
     plt.savefig(filename)
     plt.close()
     return None
-
