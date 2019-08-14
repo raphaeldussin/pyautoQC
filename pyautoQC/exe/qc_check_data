@@ -9,6 +9,8 @@ from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
 import warnings
 import uuid
+import pandas as pd
+import os
 
 parser = argparse.ArgumentParser(description='check dimensions of all files \
                                               against reference file')
@@ -39,6 +41,9 @@ parser.add_argument('-w', '--worker', type=int, required=True,
 parser.add_argument('-o', '--outputdir', type=str, required=False,
                     help="output directory")
 
+parser.add_argument('-c', '--csv', type=str, required=True,
+                    help="csv file for results")
+
 args = parser.parse_args()
 
 if not args.Wall:
@@ -56,40 +61,75 @@ cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o',
 cluster.scale(args.worker)
 client = Client(cluster)
 
-if args.timechunk is not None:
-    ds = xr.open_mfdataset(args.listfiles, chunks={'time': args.timechunk})
+# open/create the dataframe and
+# check if we need to reprocess files
+if os.path.exists(args.csv):
+    df = pd.read_csv(args.csv)
+    newindex = df.index.max() + 1
+    process=False  # assume all is right
+    for ncfile in args.listfiles:
+        file_processed = (df['file'] == ncfile).any()
+        if not file_processed:
+            process = True
+            break
 else:
-    ds = xr.open_mfdataset(args.listfiles)
+    df = pd.DataFrame()
+    newindex = 0
+    process=True
 
-if 'time' in ds.dims:
-    check, message = check_timeaxis(ds)
-    if check:
-        print('QC: time axis looks normal')
+if not process:
+    print(f'skipping already processed file(s) {args.listfiles}')
+else:
+    # init to all good
+    filestatus = {'file': args.listfiles, 'time axis': ['OK'], 'land sea mask': ['OK'],
+                  'stats': ['OK'], 'dxx var': ['OK']}
+
+    if args.timechunk is not None:
+        ds = xr.open_mfdataset(args.listfiles, chunks={'time': args.timechunk})
     else:
-        print(message)
-
-for var in args.listvar:
-    # check the mask size
-    check, message = check_masksize(ds[var], x=args.lon, y=args.lat,
-                                    z=args.depth)
-    if check:
-        print('QC: land/sea mask looks normal')
-    else:
-        print(message)
-
-    # check/compute basic stats
-    if 'time' in ds[var].dims:
-        check, message = check_stats(ds[var], ds.attrs, x=args.lon, y=args.lat,
-                                     z=args.depth, dirout=outputdir)
+        ds = xr.open_mfdataset(args.listfiles)
+    
+    if 'time' in ds.dims:
+        check, message = check_timeaxis(ds)
         if check:
-            print('QC: stats (means/std dev) looks normal')
+            print('QC: time axis looks normal')
         else:
             print(message)
+            filestatus['time axis'] = message
+    
+    for var in args.listvar:
+        # check the mask size
+        check, message = check_masksize(ds[var], x=args.lon, y=args.lat,
+                                        z=args.depth)
+        if check:
+            print('QC: land/sea mask looks normal')
+        else:
+            print(message)
+            filestatus['land sea mask'] = message
+    
+        # check/compute basic stats
+        if 'time' in ds[var].dims:
+            check, message = check_stats(ds[var], ds.attrs, x=args.lon, y=args.lat,
+                                         z=args.depth, dirout=outputdir)
+            if check:
+                print('QC: stats (means/std dev) looks normal')
+            else:
+                print(message)
+                filestatus['stats'] = message
+    
+        # second derivative check
+        check, message = check_second_derivative(ds[var], x=args.lon, y=args.lat,
+                                                 z=args.depth)
+        if check:
+            print('QC: no second derivative are zero')
+        else:
+            print(message)
+            filestatus['dxx var'] = message
 
-    # second derivative check
-    check, message = check_second_derivative(ds[var], x=args.lon, y=args.lat,
-                                             z=args.depth)
-    if check:
-        print('QC: no second derivative are zero')
-    else:
-        print(message)
+    dftmp = pd.DataFrame(data=filestatus, index=[newindex])
+    df = pd.concat([df, dftmp], axis=0)
+    
+# write final results to file
+df.to_csv(args.csv, index=False)
+
+cluster.close()
