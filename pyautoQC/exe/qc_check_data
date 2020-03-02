@@ -92,7 +92,7 @@ else:
         ds = xr.open_mfdataset(args.listfiles, chunks={'time': args.timechunk})
     else:
         ds = xr.open_mfdataset(args.listfiles)
-    
+
     if 'time' in ds.dims:
         check, message = check_timeaxis(ds)
         if check:
@@ -100,7 +100,7 @@ else:
         else:
             print(message)
             filestatus['time axis'] = message
-    
+
     for var in args.listvar:
         # check the mask size
         check, message = check_masksize(ds[var], x=args.lon, y=args.lat,
@@ -110,7 +110,7 @@ else:
         else:
             print(message)
             filestatus['land sea mask'] = message
-    
+
         # check/compute basic stats
         if 'time' in ds[var].dims:
             check, message = check_stats(ds[var], ds.attrs, x=args.lon, y=args.lat,
@@ -120,7 +120,7 @@ else:
             else:
                 print(message)
                 filestatus['stats'] = message
-    
+
         # second derivative check
         check, message = check_second_derivative(ds[var], x=args.lon, y=args.lat,
                                                  z=args.depth)
@@ -132,10 +132,11 @@ else:
 
     # close the dask cluster
     cluster.close()
+    client.close()
 
     dftmp = pd.DataFrame(data=filestatus, index=[newindex])
     df = pd.concat([df, dftmp], axis=0)
-    
+
 # write final results to file
 df.to_csv(args.csv, index=False)
 
