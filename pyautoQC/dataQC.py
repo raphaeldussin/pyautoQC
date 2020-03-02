@@ -160,8 +160,20 @@ def check_stats(da, ds_attrs, dirout='./', x='lon', y='lat', z='lev',
                    f"std_{da.name}_{yearmin}-{yearmax}.nc"
 
     # yearly_mean.to_netcdf(filename_mean, unlimited_dims='year')
+    ts_mean.load()
+
+    # test for field zero-ed out
+    if (ts_mean == 0).any():
+        check = False
+        message = message + f'PROBLEM: statistics on mean ' + \
+                  f'shows all field = 0\n'
+
     ts_mean.to_netcdf(filename_mean, unlimited_dims='year')
+
+    ts_min.load()
     ts_min.to_netcdf(filename_min, unlimited_dims='time')
+
+    ts_max.load()
     ts_max.to_netcdf(filename_max, unlimited_dims='time')
     # yearly_min.to_netcdf(filename_min, unlimited_dims='year')
     # yearly_max.to_netcdf(filename_max, unlimited_dims='year')
