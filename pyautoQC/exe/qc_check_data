@@ -41,6 +41,9 @@ parser.add_argument('-w', '--worker', type=int, required=True,
 parser.add_argument('-o', '--outputdir', type=str, required=False,
                     help="output directory")
 
+parser.add_argument('-q', '--queue', type=str, required=False,
+                    default="analysis", help="slurm partition")
+
 parser.add_argument('-c', '--csv', type=str, required=True,
                     help="csv file for results")
 
@@ -53,13 +56,6 @@ if args.outputdir is not None:
     outputdir = args.outputdir
 else:
     outputdir = './'
-
-# create the dask cluster
-clusterid = uuid.uuid4().hex
-cluster = SLURMCluster(queue='analysis', cores=8, project='gfdl_o',
-                       walltime="02:00:00", memory="96GB", name=f"QC_dask_{clusterid}")
-cluster.scale(args.worker)
-client = Client(cluster)
 
 # open/create the dataframe and
 # check if we need to reprocess files
@@ -80,6 +76,14 @@ else:
 if not process:
     print(f'skipping already processed file(s) {args.listfiles}')
 else:
+
+    # create the dask cluster
+    clusterid = uuid.uuid4().hex
+    cluster = SLURMCluster(queue=args.queue, cores=4, project='gfdl_o',
+                           walltime="00:59:00", memory="48GB", name=f"QC_dask_{clusterid}")
+    cluster.scale(args.worker)
+    client = Client(cluster)
+
     # init to all good
     filestatus = {'file': args.listfiles, 'time axis': ['OK'], 'land sea mask': ['OK'],
                   'stats': ['OK'], 'dxx var': ['OK']}
@@ -126,10 +130,12 @@ else:
             print(message)
             filestatus['dxx var'] = message
 
+    # close the dask cluster
+    cluster.close()
+
     dftmp = pd.DataFrame(data=filestatus, index=[newindex])
     df = pd.concat([df, dftmp], axis=0)
     
 # write final results to file
 df.to_csv(args.csv, index=False)
 
-cluster.close()
